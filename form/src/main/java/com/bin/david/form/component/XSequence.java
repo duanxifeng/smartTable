@@ -4,9 +4,9 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.core.TableConfig;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.column.ColumnInfo;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
 import com.bin.david.form.data.format.sequence.ISequenceFormat;
@@ -27,6 +27,7 @@ public class XSequence<T> implements IComponent<TableData<T>>{
     private ISequenceFormat format;
     private Rect clipRect;
     private Rect tempRect; //临时使用
+    private Rect scaleRect;
 
     public XSequence() {
         this.rect = new Rect();
@@ -52,7 +53,7 @@ public class XSequence<T> implements IComponent<TableData<T>>{
             showRect.top +=clipHeight;
             scaleRect.top += scaleHeight;
         }
-
+        this.scaleRect =scaleRect;
     }
 
     @Override
@@ -65,15 +66,14 @@ public class XSequence<T> implements IComponent<TableData<T>>{
         int showTop = showRect.top-clipHeight;
         canvas.save();
         canvas.clipRect(showRect.left,showTop,showRect.right, showRect.top);
-        DrawUtils.fillBackground(canvas, showRect.left, showTop, showRect.right, showRect.top,
-                config.getXSequenceBackgroundColor(),config.getPaint());
+        drawBackground(canvas, showRect, config, showTop);
         clipRect.set(showRect);
         boolean isPerColumnFixed = false;
         int clipCount = 0;
         List<ColumnInfo> childColumnInfos = tableData.getChildColumnInfos();
         for(int i = 0;i < columnSize;i++){
             Column column = columns.get(i);
-            float width = column.getWidth()*config.getZoom();
+            float width = column.getComputeWidth()*config.getZoom();
             float right = left + width;
             if(childColumnInfos.get(i).getTopParent().column.isFixed()){
                 if(left < clipRect.left) {
@@ -101,34 +101,48 @@ public class XSequence<T> implements IComponent<TableData<T>>{
         canvas.restore();
     }
 
+    /**
+     * 绘制背景
+     * @param canvas
+     * @param showRect
+     * @param config
+     * @param showTop
+     */
+    protected void drawBackground(Canvas canvas, Rect showRect, TableConfig config, int showTop) {
+        if(config.getXSequenceBackground() !=null){
+            tempRect.set(Math.max(scaleRect.left,showRect.left), showTop, Math.min(showRect.right,scaleRect.right), showRect.top);
+            config.getXSequenceBackground().drawBackground(canvas,tempRect,config.getPaint());
+        }
+    }
+
     private float showTextNum(Canvas canvas, Rect showRect, TableConfig config, float left, int i, float right) {
         if(DrawUtils.isMixHorizontalRect(showRect,(int)left,(int)right)) {
-            String text = format.format(i+1);
-            draw(canvas, (int)left, rect.top,(int)right, rect.bottom,text,i, config);
+
+            draw(canvas, (int)left, rect.top,(int)right, rect.bottom,i, config);
         }
         left = right;
         return left;
     }
 
-    private void draw(Canvas canvas,int left,int top, int right,int bottom,String text,int position,TableConfig config){
+    private void draw(Canvas canvas,int left,int top, int right,int bottom,int position,TableConfig config){
         Paint paint= config.getPaint();
-        config.getSequenceGridStyle().fillPaint(paint);
-        canvas.drawRect(left,top,right,bottom,paint);
+        tempRect.set(left,top,right,bottom);
         //绘制背景
-        ICellBackgroundFormat<Integer> backgroundFormat = config.getXSequenceBgFormat();
+        ICellBackgroundFormat<Integer> backgroundFormat = config.getXSequenceCellBgFormat();
         if(backgroundFormat != null){
-            tempRect.set(left,top,right,bottom);
-            backgroundFormat.drawBackground(canvas, tempRect,position,config.getPaint());
+            backgroundFormat.drawBackground(canvas, tempRect,position,paint);
+        }
+        if(config.getTableGridFormat() !=null){
+            config.getSequenceGridStyle().fillPaint(paint);
+            config.getTableGridFormat().drawXSequenceGrid(canvas,position,tempRect,paint);
         }
         config.getXSequenceStyle().fillPaint(paint);
         //字体颜色跟随背景变化
         if(backgroundFormat != null&& backgroundFormat.getTextColor(position) != TableConfig.INVALID_COLOR){
             paint.setColor(backgroundFormat.getTextColor(position));
         }
-        //字体缩放
-        paint.setTextSize(paint.getTextSize()*(config.getZoom()>1?1:config.getZoom()));
-        paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(text,(right +left)/2, DrawUtils.getTextCenterY((bottom+top)/2,paint) ,paint);
+        format.draw(canvas,position,tempRect,config);
+
 
     }
 

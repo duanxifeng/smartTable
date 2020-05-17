@@ -5,11 +5,11 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
-import android.util.Log;
 
 import com.bin.david.form.core.TableConfig;
-import com.bin.david.form.data.Column;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.CellInfo;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.column.ColumnInfo;
 import com.bin.david.form.data.TableInfo;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
 import com.bin.david.form.data.format.selected.IDrawOver;
@@ -50,6 +50,7 @@ public class TableProvider<T> implements TableClickObserver {
     private GridDrawer<T> gridDrawer;
     private PointF tipPoint = new PointF();
     private IDrawOver drawOver;
+    private CellInfo cellInfo = new CellInfo();
 
     public TableProvider() {
 
@@ -78,7 +79,7 @@ public class TableProvider<T> implements TableClickObserver {
         drawContent(canvas);
         operation.draw(canvas,showRect,config);
         if(drawOver !=null)
-            drawOver.draw(canvas,showRect,config);
+            drawOver.draw(canvas,scaleRect,showRect,config);
         canvas.restore();
         if (isClickPoint && clickColumnInfo != null) {
             onColumnClickListener.onClick(clickColumnInfo);
@@ -99,7 +100,6 @@ public class TableProvider<T> implements TableClickObserver {
         isClickPoint = false;
         clickColumnInfo = null;
         tipColumn = null;
-        gridDrawer.reset();
         operation.reset();
         this.scaleRect = scaleRect;
         this.showRect = showRect;
@@ -129,13 +129,12 @@ public class TableProvider<T> implements TableClickObserver {
     private void drawCount(Canvas canvas) {
         if (tableData.isShowCount()) {
             float left = scaleRect.left;
-            float bottom = config.isFixedCountRow() ? showRect.bottom : scaleRect.bottom;
+            float bottom = config.isFixedCountRow() ? Math.min(scaleRect.bottom,showRect.bottom) : scaleRect.bottom;
             int countHeight = tableData.getTableInfo().getCountHeight();
             float top = bottom - countHeight;
-            int backgroundColor = config.getCountBackgroundColor();
-            if(backgroundColor != TableConfig.INVALID_COLOR) {
-                DrawUtils.fillBackground(canvas, (int)left, (int)top, showRect.right,
-                        (int)bottom, backgroundColor, config.getPaint());
+            if(config.getCountBackground() != null){
+                tempRect.set((int)left, (int)top, showRect.right,(int)bottom);
+                config.getCountBackground().drawBackground(canvas,tempRect,config.getPaint());
             }
             List<ColumnInfo> childColumnInfos = tableData.getChildColumnInfos();
             if (DrawUtils.isVerticalMixRect(showRect, (int)top, (int)bottom)) {
@@ -147,7 +146,7 @@ public class TableProvider<T> implements TableClickObserver {
                 for (int i = 0; i < columnSize; i++) {
                     Column column = columns.get(i);
                     float tempLeft = left;
-                    float width = column.getWidth()*config.getZoom();
+                    float width = column.getComputeWidth()*config.getZoom();
                     if(childColumnInfos.get(i).getTopParent().column.isFixed()){
                         if(left < clipRect.left) {
                             left = clipRect.left;
@@ -161,7 +160,7 @@ public class TableProvider<T> implements TableClickObserver {
                                 showRect.right, showRect.bottom);
                     }
                     tempRect.set((int)left, (int)top, (int)(left+width), (int)bottom);
-                    drawCountText(canvas, column,tempRect, column.getTotalNumString(), config);
+                    drawCountText(canvas, column,i,tempRect, column.getTotalNumString(), config);
                     left = tempLeft;
                     left +=width;
                 }
@@ -181,8 +180,11 @@ public class TableProvider<T> implements TableClickObserver {
         TableInfo tableInfo = tableData.getTableInfo();
         int titleHeight = tableInfo.getTitleHeight() * tableInfo.getMaxLevel();
         int clipHeight = config.isFixedTitle() ? titleHeight : Math.max(0, titleHeight - dis);
-        DrawUtils.fillBackground(canvas, showRect.left, showRect.top, showRect.right,
-                showRect.top + clipHeight, config.getColumnTitleBackgroundColor(), config.getPaint());
+        if(config.getColumnTitleBackground() !=null){
+            tempRect.set(showRect.left, showRect.top, showRect.right,
+                    showRect.top + clipHeight);
+            config.getColumnTitleBackground().drawBackground(canvas,tempRect,config.getPaint());
+        }
         clipRect.set(showRect);
         List<ColumnInfo> columnInfoList = tableData.getColumnInfos();
         float zoom = config.getZoom();
@@ -239,7 +241,6 @@ public class TableProvider<T> implements TableClickObserver {
                 + (config.isFixedTitle() ? showRect.top : scaleRect.top);
         int right = (int) (left + info.width *config.getZoom());
         int bottom = (int) (top + info.height*config.getZoom());
-
         if (DrawUtils.isMixRect(showRect, left, top, right, bottom)) {
             if (!isClickPoint && onColumnClickListener != null) {
                 if (DrawUtils.isClick(left, top, right, bottom, clickPoint)) {
@@ -250,9 +251,13 @@ public class TableProvider<T> implements TableClickObserver {
             }
             Paint paint = config.getPaint();
             tempRect.set(left,top,right,bottom);
+            if(config.getTableGridFormat() !=null) {
+                config.getColumnTitleGridStyle().fillPaint(paint);
+                int position = tableData.getChildColumns().indexOf(info.column);
+                config.getTableGridFormat().drawColumnTitleGrid(canvas,tempRect,info.column,position,paint);
+            }
             tableData.getTitleDrawFormat().draw(canvas, info.column, tempRect, config);
-            config.getColumnTitleGridStyle().fillPaint(paint);
-            canvas.drawRect(left,top,right,bottom,paint);
+
         }
     }
 
@@ -263,7 +268,6 @@ public class TableProvider<T> implements TableClickObserver {
     private void drawContent(Canvas canvas) {
         float top;
         float left = scaleRect.left;
-        Paint paint = config.getPaint();
         List<Column> columns = tableData.getChildColumns();
         clipRect.set(showRect);
         TableInfo info = tableData.getTableInfo();
@@ -271,8 +275,10 @@ public class TableProvider<T> implements TableClickObserver {
         int dis = config.isFixedCountRow() ? info.getCountHeight()
                 : showRect.bottom + info.getCountHeight() - scaleRect.bottom;
         int fillBgBottom = showRect.bottom - Math.max(dis, 0);
-        DrawUtils.fillBackground(canvas, showRect.left, showRect.top, showRect.right,
-                fillBgBottom, config.getContentBackgroundColor(), config.getPaint());
+        if(config.getContentBackground() !=null){
+            tempRect.set(showRect.left, showRect.top, showRect.right, fillBgBottom);
+            config.getContentBackground().drawBackground(canvas,tempRect,config.getPaint());
+        }
         if (config.isFixedCountRow()) {
             canvas.save();
             canvas.clipRect(showRect.left, showRect.top, showRect.right, showRect.bottom - info.getCountHeight());
@@ -281,10 +287,11 @@ public class TableProvider<T> implements TableClickObserver {
         boolean isPerFixed = false;
         int clipCount = 0;
         Rect correctCellRect;
+        TableInfo tableInfo = tableData.getTableInfo();
         for (int i = 0; i < columnSize; i++) {
             top = scaleRect.top;
             Column column = columns.get(i);
-            float width = column.getWidth()*config.getZoom();
+            float width = column.getComputeWidth()*config.getZoom();
             float tempLeft = left;
             //根据根部标题是否固定
             Column topColumn = childColumnInfo.get(i).getTopParent().column;
@@ -302,11 +309,19 @@ public class TableProvider<T> implements TableClickObserver {
                clipCount++;
             }
             float right = left + width;
+
             if (left < showRect.right) {
                 int size = column.getDatas().size();
+                int realPosition = 0;
                 for (int j = 0; j < size; j++) {
                     String value = column.format(j);
-                    float bottom = top + info.getLineHeightArray()[j]*config.getZoom();
+                    int skip =tableInfo.getSeizeCellSize(column,j);
+                    int totalLineHeight =0;
+                    for(int k = realPosition;k<realPosition+skip;k++){
+                        totalLineHeight += info.getLineHeightArray()[k];
+                    }
+                    realPosition+=skip;
+                    float bottom = top + totalLineHeight*config.getZoom();
                     tempRect.set((int) left, (int) top, (int) right, (int) bottom);
                     correctCellRect = gridDrawer.correctCellRect(j, i, tempRect, config.getZoom()); //矫正格子的大小
                     if (correctCellRect != null) {
@@ -324,22 +339,16 @@ public class TableProvider<T> implements TableClickObserver {
                                     clickPoint.set(-Integer.MAX_VALUE, -Integer.MAX_VALUE);
                                 }
                                 operation.checkSelectedPoint(i, j, correctCellRect);
-                                config.getContentStyle().fillPaint(paint);
-                                column.getDrawFormat().draw(canvas, column, data, value, correctCellRect, j, config);
+                                cellInfo.set(column,data,value,i,j);
+                                drawContentCell(canvas,cellInfo,correctCellRect,config);
+
                             }
                         } else {
                             break;
                         }
                     }
-                    if (i == 0) {
-                        gridDrawer.addHorizontalGrid(j, Math.max(scaleRect.left, showRect.left),
-                                 Math.min(scaleRect.right, showRect.right), (int)bottom);
-                    }
                     top = bottom;
                 }
-                config.getGridStyle().fillPaint(paint);
-                gridDrawer.addVerticalGrid(i,Math.max(scaleRect.top, showRect.top)
-                        , Math.min(showRect.bottom,scaleRect.bottom),isPerFixed?clipRect.left:(int)left,!topColumn.isFixed()&&left<clipRect.left);
                 left = tempLeft + width;
             } else {
                 break;
@@ -348,10 +357,29 @@ public class TableProvider<T> implements TableClickObserver {
         for(int i = 0;i < clipCount;i++){
             canvas.restore();
         }
-        gridDrawer.drawGrid(canvas,config);
         if (config.isFixedCountRow()) {
             canvas.restore();
         }
+    }
+
+    /**
+     *绘制内容格子
+     * @param c 画布
+     * @param cellInfo 格子信息
+     * @param rect 方位
+     * @param config 表格配置
+     */
+    protected void drawContentCell(Canvas c, CellInfo<T> cellInfo, Rect rect,TableConfig config) {
+
+        if(config.getContentCellBackgroundFormat()!= null){
+            config.getContentCellBackgroundFormat().drawBackground(c,rect,cellInfo,config.getPaint());
+        }
+        if(config.getTableGridFormat() !=null){
+            config.getContentGridStyle().fillPaint(config.getPaint());
+            config.getTableGridFormat().drawContentGrid(c,cellInfo.col,cellInfo.row,rect,cellInfo,config.getPaint());
+        }
+        rect.left += config.getTextLeftOffset();
+        cellInfo.column.getDrawFormat().draw(c,rect, cellInfo,  config);
     }
 
     /**
@@ -374,26 +402,30 @@ public class TableProvider<T> implements TableClickObserver {
     /**
      * 绘制提示
      */
-    void drawTip(Canvas canvas, float x, float y, Column c, int position) {
+    private void drawTip(Canvas canvas, float x, float y, Column c, int position) {
         if (tip != null) {
             tip.drawTip(canvas, x, y, showRect, c, position);
         }
     }
 
-    private void drawCountText(Canvas canvas,Column column, Rect rect, String text, TableConfig config) {
+    private void drawCountText(Canvas canvas,Column column,int position, Rect rect, String text, TableConfig config) {
         Paint paint = config.getPaint();
         //绘制背景
-        ICellBackgroundFormat<Column> backgroundFormat = config.getCountBgFormat();
+        ICellBackgroundFormat<Column> backgroundFormat = config.getCountBgCellFormat();
         if(backgroundFormat != null){
             backgroundFormat.drawBackground(canvas,rect,column,config.getPaint());
         }
-        config.getGridStyle().fillPaint(paint);
-        canvas.drawRect(rect, paint);
+        //绘制网格
+        if(config.getTableGridFormat() !=null){
+            config.getContentGridStyle().fillPaint(paint);
+            config.getTableGridFormat().drawCountGrid(canvas,position,rect,column,paint);
+        }
         config.getCountStyle().fillPaint(paint);
         //字体颜色跟随背景变化
         if(backgroundFormat != null&& backgroundFormat.getTextColor(column) != TableConfig.INVALID_COLOR){
             paint.setColor(backgroundFormat.getTextColor(column));
         }
+        //绘制字体
         paint.setTextSize(paint.getTextSize()*config.getZoom());
         if(column.getTextAlign() !=null) {
             paint.setTextAlign(column.getTextAlign());
@@ -404,15 +436,8 @@ public class TableProvider<T> implements TableClickObserver {
 
     @Override
     public void onClick(float x, float y) {
-       /* if(gridDrawer.isClickXSequence(y)){
-            int position = gridDrawer.getClickXSequence(x);
-
-        }else if(gridDrawer.isClickYSequence(x)) {
-            int position =gridDrawer.getClickYSequence(y);
-        }else{*/
-            clickPoint.x = x;
-            clickPoint.y = y;
-        /*}*/
+        clickPoint.x = x;
+        clickPoint.y = y;
     }
 
     public OnColumnClickListener getOnColumnClickListener() {
@@ -447,8 +472,8 @@ public class TableProvider<T> implements TableClickObserver {
 
     /**
      * 计算任何point在View的位置
-     * @param row
-     * @param col
+     * @param row 列
+     * @param col 行
      * @return
      */
     public int[] getPointLocation(double row,double col){
@@ -457,7 +482,7 @@ public class TableProvider<T> implements TableClickObserver {
         int x=0,y =0;
         int columnSize = childColumns.size();
         for(int i = 0; i <= (columnSize > col+1 ? col+1 : columnSize-1);i++){
-            int w = childColumns.get(i).getWidth();
+            int w = childColumns.get(i).getComputeWidth();
             if(i == (int)col+1){
                 x +=w *(col-(int)col);
             }else {
@@ -481,8 +506,8 @@ public class TableProvider<T> implements TableClickObserver {
     }
     /**
      * 计算任何point在View的大小
-     * @param row
-     * @param col
+     * @param row 列
+     * @param col 行
      * @return
      */
     public int[] getPointSize(int row,int col){
@@ -490,11 +515,16 @@ public class TableProvider<T> implements TableClickObserver {
         int[] lineHeights =  tableData.getTableInfo().getLineHeightArray();
         col= col < childColumns.size() ? col:childColumns.size()-1;//列
         row = row< lineHeights.length ? row:lineHeights.length;//行
-        return new int[]{(int) (childColumns.get(col).getWidth()*config.getZoom()),
+        col = col< 0 ? 0 : col;
+        row = row< 0 ? 0 : row;
+        return new int[]{(int) (childColumns.get(col).getComputeWidth()*config.getZoom()),
                 (int) (lineHeights[row]*config.getZoom())};
 
     }
 
+    /**
+     * 设置表面绘制
+     */
     public void setDrawOver(IDrawOver drawOver) {
         this.drawOver = drawOver;
     }

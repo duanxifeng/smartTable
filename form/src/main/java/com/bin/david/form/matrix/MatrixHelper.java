@@ -7,6 +7,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Point;
 import android.graphics.Rect;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -48,11 +49,12 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
     private int mMinimumVelocity;
     private boolean isFling;
     private OnTableChangeListener listener;
-    private float flingRate = 0.5f; //速率
+    private float flingRate = 1f; //速率
     private Rect scaleRect = new Rect();
     private boolean isZooming; //是否正在缩放
     private boolean isAutoFling = false;
     private OnInterceptListener onInterceptListener;
+    int touchSlop; //最小滚动距离
 
     /**
      * 手势帮助类构造方法
@@ -62,6 +64,7 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
         mScaleGestureDetector = new ScaleGestureDetector(context, this);
         mGestureDetector = new GestureDetector(context, new OnTableGestureListener());
         final ViewConfiguration configuration = ViewConfiguration.get(context);
+        touchSlop = configuration.getScaledTouchSlop();
         mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
         scroller = new Scroller(context);
         zoomRect = new Rect();
@@ -218,6 +221,7 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
             if(onInterceptListener ==null || !onInterceptListener.isIntercept(e1,distanceX,distanceY)){
+
                 translateX += distanceX;
                 translateY += distanceY;
                 notifyViewChanged();
@@ -297,18 +301,33 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
         return true;
     }
 
+    private boolean isScaleMax;
+    private boolean isScaleMin;
+
     @Override
     public boolean onScale(ScaleGestureDetector detector) {
         float oldZoom = zoom;
         boolean isScaleEnd = false;
         float scale = detector.getScaleFactor();
+        if(scale >1 && isScaleMax){
+            isScaleMin = false;
+            return true;
+        }else if(scale <1 && isScaleMin){
+            isScaleMax = false;
+            return true;
+        }
         this.zoom = tempZoom * scale;
-        if (this.zoom >= maxZoom) {
+        if (zoom >= maxZoom) {
+            isScaleMax = true;
             this.zoom = maxZoom;
             isScaleEnd = true;
-        } else if (this.zoom <= minZoom) {
+        } else if (this.zoom<= minZoom) {
+            isScaleMin = true;
             this.zoom = minZoom;
             isScaleEnd = true;
+        }else{
+            isScaleMin = false;
+            isScaleMax = false;
         }
         float factor = zoom / oldZoom;
         resetTranslate(factor);
@@ -437,8 +456,8 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
             } else {
                 isFullShowY = true;
             }
-            scaleRect.left = providerRect.left - offsetX - translateX;
-            scaleRect.top = providerRect.top - offsetY - translateY;
+            scaleRect.left = providerRect.left - offsetX - translateX+showRect.left;
+            scaleRect.top = providerRect.top - offsetY - translateY+showRect.top;
             if (isFullShowX) {
                 if (isZooming) {
                     scaleRect.left = scaleRect.left < showRect.left ? showRect.left : scaleRect.left;
@@ -555,6 +574,13 @@ public class MatrixHelper extends Observable<TableClickObserver> implements ITou
             maxZoom = 1;
         }
         this.maxZoom = maxZoom;
+    }
+
+    public void reset(){
+        this.zoom =1;
+        this.translateX =0;
+        this.translateY =0;
+        notifyViewChanged();
     }
 
     /**

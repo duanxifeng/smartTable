@@ -1,6 +1,7 @@
 package com.bin.david.smarttable;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 
@@ -14,7 +15,7 @@ import com.bin.david.smarttable.bean.PM25;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.scwang.smartrefresh.layout.api.RefreshLayout;
-import com.scwang.smartrefresh.layout.listener.OnLoadmoreListener;
+import com.scwang.smartrefresh.layout.listener.OnLoadMoreListener;
 import com.scwang.smartrefresh.layout.listener.OnRefreshListener;
 import com.zhy.http.okhttp.OkHttpUtils;
 import com.zhy.http.okhttp.callback.StringCallback;
@@ -38,10 +39,10 @@ public class RefreshActivity extends AppCompatActivity {
         FontStyle.setDefaultTextSize(DensityUtils.sp2px(this,15));
         table = (SmartTable<PM25>) findViewById(R.id.table);
         refreshLayout = (RefreshLayout)findViewById(R.id.refreshLayout);
-        table.getConfig().setContentBackgroundFormat(new BaseCellBackgroundFormat<CellInfo>() {
+        table.getConfig().setContentCellBackgroundFormat(new BaseCellBackgroundFormat<CellInfo>() {
             @Override
             public int getBackGroundColor(CellInfo cellInfo) {
-                if(cellInfo.position%2 == 1) {
+                if(cellInfo.row %2 == 1) {
                     return ContextCompat.getColor(RefreshActivity.this, R.color.content_bg);
                 }
                 return TableConfig.INVALID_COLOR;
@@ -56,11 +57,10 @@ public class RefreshActivity extends AppCompatActivity {
                 //refreshlayout.finishRefresh(2000/*,false*/);//传入false表示刷新失败
             }
         });
-        refreshLayout.setOnLoadmoreListener(new OnLoadmoreListener() {
+        refreshLayout.setOnLoadMoreListener(new OnLoadMoreListener() {
             @Override
-            public void onLoadmore(RefreshLayout refreshlayout) {
-               getData(true);
-               // refreshlayout.finishLoadmore(2000/*,false*/);//传入false表示加载失败
+            public void onLoadMore(@NonNull RefreshLayout refreshLayout) {
+                getData(true);
             }
         });
         getData(false);
@@ -80,7 +80,7 @@ public class RefreshActivity extends AppCompatActivity {
                         if(!isFoot) {
                             refreshLayout.finishRefresh(false);
                         }else{
-                            refreshLayout.finishLoadmore(false);
+                            refreshLayout.finishLoadMore(false);
                         }
                     }
 
@@ -98,7 +98,7 @@ public class RefreshActivity extends AppCompatActivity {
                                 if(!isFoot) {
                                     refreshLayout.finishRefresh();
                                 }else{
-                                    refreshLayout.finishLoadmore();
+                                    refreshLayout.finishLoadMore();
                                 }
                                 table.addData(pm25List,isFoot);
                             }

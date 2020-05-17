@@ -81,19 +81,17 @@ public class YSequence<T> implements IComponent<TableData<T>> {
 
         tempRect.set(showLeft,(int)tempTop-topHeight,showRect.left,(int)tempTop);
         drawLeftAndTop(canvas,showRect,tempRect,config);
-
         canvas.save();
         canvas.clipRect(showLeft,showTop,
                 showRect.left,showRect.bottom);
-        DrawUtils.fillBackground(canvas, showLeft,showTop,
-                showRect.left,showRect.bottom,config.getYSequenceBackgroundColor(),config.getPaint());
+        drawBackground(canvas, showRect, config, showLeft, showTop);
         if(config.isShowColumnTitle()) {
             for (int i = 0; i < info.getMaxLevel(); i++) {
                 num++;
                 float bottom = tempTop + info.getTitleHeight();
                 if (DrawUtils.isVerticalMixRect(showRect, (int) top, (int) bottom)) {
                     tempRect.set(rect.left, (int) tempTop, rect.right, (int) bottom);
-                    draw(canvas,tempRect, format.format(num), num, config);
+                    draw(canvas,tempRect, num, config);
                 }
                 tempTop = bottom;
                 top += info.getTitleHeight();
@@ -101,11 +99,11 @@ public class YSequence<T> implements IComponent<TableData<T>> {
         }
         int tempBottom =  showRect.bottom;
         if(tableData.isShowCount() && isFixedCount){
-            int bottom = showRect.bottom;
+            int bottom = Math.min(showRect.bottom,scaleRect.bottom);
             tempBottom = bottom-info.getCountHeight();
             tempRect.set(rect.left, tempBottom,
                     rect.right, bottom);
-            draw(canvas,tempRect,format.format(num +totalSize+1),num +totalSize+1, config);
+            draw(canvas,tempRect,num +totalSize+1, config);
         }
         if(isFixedTitle || isFixedCount){
             canvas.save();
@@ -117,7 +115,7 @@ public class YSequence<T> implements IComponent<TableData<T>> {
             if(showRect.bottom >= rect.top) {
                 if (DrawUtils.isVerticalMixRect(showRect, (int)top,  (int)bottom)) {
                     tempRect.set(rect.left, (int)top, rect.right, (int)bottom);
-                    draw(canvas, tempRect,format.format(num),num, config);
+                    draw(canvas, tempRect,num, config);
                 }
             }else{
                 break;
@@ -129,7 +127,7 @@ public class YSequence<T> implements IComponent<TableData<T>> {
             float bottom = top+info.getCountHeight();
             if(DrawUtils.isVerticalMixRect(showRect,(int)top,(int)bottom)) {
                 tempRect.set(rect.left, (int)top, rect.right, (int)bottom);
-                draw(canvas,rect, format.format(num),num, config);
+                draw(canvas,rect,num, config);
             }
         }
         if(isFixedTitle || isFixedCount){
@@ -140,6 +138,23 @@ public class YSequence<T> implements IComponent<TableData<T>> {
     }
 
     /**
+     * 绘制背景
+     * @param canvas
+     * @param showRect
+     * @param config
+     * @param showLeft
+     * @param showTop
+     */
+    protected void drawBackground(Canvas canvas, Rect showRect, TableConfig config, int showLeft, int showTop) {
+
+        if(config.getYSequenceBackground() !=null){
+            tempRect.set(showLeft,Math.max(scaleRect.top,showTop),
+                    showRect.left,Math.min(scaleRect.bottom,showRect.bottom));
+            config.getYSequenceBackground().drawBackground(canvas,tempRect,config.getPaint());
+        }
+    }
+
+    /**
      * 绘制左上角空隙
      * @param canvas
      * @param rect
@@ -147,7 +162,7 @@ public class YSequence<T> implements IComponent<TableData<T>> {
      */
     private void drawLeftAndTop(Canvas canvas,Rect showRect,Rect rect,TableConfig config){
         canvas.save();
-        canvas.clipRect(rect.left,showRect.top,
+        canvas.clipRect(Math.max(this.rect.left,rect.left),showRect.top,
                 showRect.left,rect.bottom);
         Paint paint = config.getPaint();
         if(config.getLeftAndTopBackgroundColor() !=0){
@@ -155,35 +170,36 @@ public class YSequence<T> implements IComponent<TableData<T>> {
             paint.setColor(config.getLeftAndTopBackgroundColor());
             canvas.drawRect(rect,paint);
         }
-        config.getSequenceGridStyle().fillPaint(paint);
-        canvas.drawRect(rect,paint);
+        if(config.getTableGridFormat() !=null) {
+            config.getSequenceGridStyle().fillPaint(paint);
+            config.getTableGridFormat().drawLeftAndTopGrid(canvas,rect,paint);
+        }
         LeftTopDrawFormat format = config.getLeftTopDrawFormat();
         if( format!=null){
             format.setImageSize(rect.width(),rect.height());
-            config.getLeftTopDrawFormat().draw(canvas,null,null,null,rect,0,config);
+            config.getLeftTopDrawFormat().draw(canvas,rect,null,config);
         }
         canvas.restore();
     }
 
-    private void draw(Canvas canvas,Rect rect,String text,int position,TableConfig config){
+    private void draw(Canvas canvas,Rect rect,int position,TableConfig config){
         Paint paint= config.getPaint();
-        ICellBackgroundFormat<Integer> backgroundFormat = config.getYSequenceBgFormat();
+        ICellBackgroundFormat<Integer> backgroundFormat = config.getYSequenceCellBgFormat();
         int textColor =TableConfig.INVALID_COLOR;
         if(backgroundFormat != null){
             backgroundFormat.drawBackground(canvas,rect,position,config.getPaint());
             textColor =  backgroundFormat.getTextColor(position);
         }
-        config.getSequenceGridStyle().fillPaint(paint);
-        canvas.drawRect(rect,paint);
+        if(config.getTableGridFormat() !=null){
+            config.getSequenceGridStyle().fillPaint(paint);
+            config.getTableGridFormat().drawYSequenceGrid(canvas,position,rect,paint);
+        }
         config.getYSequenceStyle().fillPaint(paint);
 
         if(textColor != TableConfig.INVALID_COLOR){
             paint.setColor(textColor);
         }
-        float hZoom = (config.getZoom()>1?1:config.getZoom());
-        paint.setTextSize(paint.getTextSize()*hZoom);
-        paint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(text,rect.centerX(), DrawUtils.getTextCenterY(rect.centerY(),paint) ,paint);
+        format.draw(canvas,position-1,rect,config);
     }
 
     public int getWidth() {

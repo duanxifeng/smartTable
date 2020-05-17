@@ -9,7 +9,7 @@ import android.view.View;
 import com.bin.david.form.core.SmartTable;
 import com.bin.david.form.core.TableConfig;
 import com.bin.david.form.data.CellInfo;
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.bg.BaseCellBackgroundFormat;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
@@ -70,7 +70,7 @@ public class AlignActivity extends AppCompatActivity implements View.OnClickList
         ICellBackgroundFormat<CellInfo> backgroundFormat = new BaseCellBackgroundFormat<CellInfo>() {
             @Override
             public int getBackGroundColor(CellInfo cellInfo) {
-                if(cellInfo.position%2 == 0) {
+                if(cellInfo.row %2 == 0) {
                     return ContextCompat.getColor(AlignActivity.this, R.color.content_bg);
                 }else{
                     return TableConfig.INVALID_COLOR; //返回无效颜色，不会绘制
@@ -78,7 +78,7 @@ public class AlignActivity extends AppCompatActivity implements View.OnClickList
             }
         };
         table.setSelectFormat(new BaseSelectFormat());
-        table.getConfig().setContentBackgroundFormat(backgroundFormat);
+        table.getConfig().setContentCellBackgroundFormat(backgroundFormat);
         table.setTableData(tableData);
 
     }
@@ -250,5 +250,10 @@ public class AlignActivity extends AppCompatActivity implements View.OnClickList
     }
 
 
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        chartDialog = null;
+        quickChartDialog = null;
+    }
 }

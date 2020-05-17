@@ -6,8 +6,8 @@ import android.support.annotation.Nullable;
 import android.widget.Toast;
 
 import com.bin.david.form.core.SmartTable;
-import com.bin.david.form.data.Column;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.column.ColumnInfo;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.IFormat;
 import com.bin.david.form.data.format.count.ICountFormat;
@@ -174,9 +174,9 @@ public class TableListAdapter extends BaseQuickAdapter<String,BaseViewHolder> {
         // ageColumn.setAutoCount(true);
         //table.getConfig().setYSequenceBackgroundColor(mContext.getResources().getColor(R.color.arc1));
         //table.getConfig().setXSequenceBackgroundColor(mContext.getResources().getColor(R.color.arc2));
-        table.getConfig().setColumnTitleBackgroundColor(mContext.getResources().getColor(R.color.windows_bg));
+
         //table.getConfig().setContentBackgroundColor(mContext.getResources().getColor(R.color.arc21));
-        table.getConfig().setCountBackgroundColor(mContext.getResources().getColor(R.color.windows_bg));
+
         tableData.setTitleDrawFormat(new TitleImageDrawFormat(size,size, TitleImageDrawFormat.RIGHT,10) {
             @Override
             protected Context getContext() {

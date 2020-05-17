@@ -29,6 +29,7 @@ import jxl.Image;
 import jxl.Range;
 import jxl.Sheet;
 import jxl.Workbook;
+import jxl.biff.drawing.Chart;
 import jxl.format.Alignment;
 import jxl.format.CellFormat;
 import jxl.format.Colour;
@@ -50,10 +51,10 @@ public class JXLExcel2Table extends BaseExcel2Table<Cell> {
         super.initTableConfig(context, table);
         table.getProvider().setDrawOver(new IDrawOver() {
             @Override
-            public void draw(Canvas canvas, Rect showRect, TableConfig config) {
+            public void draw(Canvas canvas,Rect scaleRect, Rect showRect, TableConfig config) {
                 if(imgPointSet.size() >0){
                     for(ImagePoint point :imgPointSet){
-                        if(table.getProvider().getGridDrawer().maybeContain(point.row,point.col)) {
+                       /* if(table.getProvider().getGridDrawer().maybeContain(point.row,point.col)) {*/
                             Bitmap bitmap = cache.get(point);
                             int[] location = table.getProvider().getPointLocation(point.row,point.col);
                             int[] size = table.getProvider().getPointSize((int)Math.ceil(point.row),(int)Math.ceil(point.col));
@@ -61,7 +62,7 @@ public class JXLExcel2Table extends BaseExcel2Table<Cell> {
                             int height = (int)(size[1]*point.height);
                             Rect imgBitmap = new Rect(location[0],location[1],location[0]+width,location[1]+height);
                             DrawHelper.drawBitmap(canvas,imgBitmap,bitmap,config);
-                        }
+                        /*}*/
                     }
                 }
             }
@@ -83,8 +84,7 @@ public class JXLExcel2Table extends BaseExcel2Table<Cell> {
     public List<String> getSheetName(Context context,String fileName)throws Exception {
 
             List<String> list = new ArrayList<>();
-            InputStream is = context.getAssets().open(fileName);
-            Workbook workbook = Workbook.getWorkbook(is);
+            Workbook workbook = Workbook.getWorkbook(getInputStream(context,fileName));
             int sheetNum = workbook.getNumberOfSheets();
             for (int i = 0; i < sheetNum; i++) {
                 Sheet sheet = workbook.getSheet(i);
@@ -100,8 +100,8 @@ public class JXLExcel2Table extends BaseExcel2Table<Cell> {
         cache.evictAll();
         imgPointSet.clear();
         int maxRow, maxColumn;
-        InputStream is = context.getAssets().open(fileName);
-        Workbook workbook = Workbook.getWorkbook(is);
+
+        Workbook workbook = Workbook.getWorkbook(getInputStream(context,fileName));
         Sheet sheet = workbook.getSheet(position);
         Range[] ranges = sheet.getMergedCells();
         if(ranges !=null) {

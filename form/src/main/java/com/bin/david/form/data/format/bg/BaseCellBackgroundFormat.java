@@ -8,7 +8,7 @@ import com.bin.david.form.core.TableConfig;
 
 /**
  * Created by huang on 2017/11/14.
- * 提供绘制Rect格子背景绘制
+ * 通用绘制Rect格子背景绘制
  */
 
 public abstract class BaseCellBackgroundFormat<T> implements ICellBackgroundFormat<T> {
@@ -19,7 +19,7 @@ public abstract class BaseCellBackgroundFormat<T> implements ICellBackgroundForm
         if(color != TableConfig.INVALID_COLOR) {
             paint.setColor(color);
             paint.setStyle(Paint.Style.FILL);
-            canvas.drawRect(rect.left, rect.top, rect.right, rect.bottom, paint);
+            canvas.drawRect(rect, paint);
         }
     }
 

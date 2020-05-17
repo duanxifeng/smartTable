@@ -14,8 +14,9 @@ public enum TableStyle {
   FIXED_COUNT_ROW("固定统计行"),
   ZOOM("是否缩放"),
   ALIGN("文字位置"),
-
-  FLING("Fling");
+  ANIM("动画"),
+  FLING("Fling"),
+  SHOW_SEQ("隐藏序列");
 
 
 

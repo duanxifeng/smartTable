@@ -1,6 +1,10 @@
 package com.bin.david.form.utils;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.NinePatch;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -74,9 +78,9 @@ public class DrawUtils {
      * @param paint
      * @return
      */
-    public static int getMultiTextHeight(Paint paint,String value){
+    public static int getMultiTextHeight(Paint paint,String[] values){
 
-        return getTextHeight(paint)* value.split("\n").length;
+        return getTextHeight(paint)* values.length;
     }
 
     /**
@@ -84,8 +88,8 @@ public class DrawUtils {
      * @param paint
      * @return
      */
-    public static int getMultiTextWidth(Paint paint,String value){
-        String[] values = value.split("\n");
+    public static int getMultiTextWidth(Paint paint,String[] values){
+
         int maxWidth  =0;
         for(String val :values){
             int width = (int) paint.measureText(val);
@@ -96,13 +100,45 @@ public class DrawUtils {
         return maxWidth;
     }
 
-    public static void drawMultiText(Canvas canvas,Paint paint,Rect rect,String value){
-        String[] values = value.split("\n");
+    /**
+     * 绘制.9图片
+     * @param canvas 画布
+     * @param context 上下文
+     * @param drawableID Res资源ID
+     * @param rect 矩形
+     */
+    public static void drawPatch(Canvas canvas,Context context,int drawableID,Rect rect){
+        Bitmap bmp_9 = BitmapFactory.decodeResource(context.getResources(), drawableID);
+        NinePatch ninePatch  = new NinePatch(bmp_9, bmp_9.getNinePatchChunk(), null);
+        ninePatch.draw(canvas, rect);
+    }
+
+
+
+    /**
+     * 绘制多行文字
+     * @param canvas
+     * @param paint
+     * @param rect
+     */
+    public static void drawMultiText(Canvas canvas,Paint paint,Rect rect,String[] values){
         for(int i =0;i <values.length;i++) {
             int centerY = (int) ((rect.bottom + rect.top) / 2+ (values.length/2f-i-0.5)*getTextHeight(paint));
-            canvas.drawText(values[i], DrawUtils.getTextCenterX(rect.left, rect.right, paint),
+            canvas.drawText(values[values.length-i-1], DrawUtils.getTextCenterX(rect.left, rect.right, paint),
                     DrawUtils.getTextCenterY(centerY, paint), paint);
         }
+    }
+
+    /**
+     * 绘制单行文字
+     * @param canvas
+     * @param paint
+     * @param rect
+     * @param value
+     */
+    public static void drawSingleText(Canvas canvas,Paint paint,Rect rect,String value){
+        canvas.drawText(value, DrawUtils.getTextCenterX(rect.left, rect.right, paint),
+                DrawUtils.getTextCenterY(rect.centerY(), paint), paint);
     }
 
 }

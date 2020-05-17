@@ -10,7 +10,8 @@ import android.view.View;
 import com.bin.david.form.core.SmartTable;
 import com.bin.david.form.core.TableConfig;
 import com.bin.david.form.data.CellInfo;
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.format.bg.BaseBackgroundFormat;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.bg.BaseCellBackgroundFormat;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
@@ -64,15 +65,17 @@ public class ManyActivity extends AppCompatActivity implements View.OnClickListe
         }
         List<Column> columns = new ArrayList<>();
         for(int i = 0; i<150;i++){
-            columns.add( new Column<>("姓名"+i, "name"));
+            Column column = new Column<>("姓名"+i, "name");
+            column.setFast(true);
+            columns.add(column);
         }
 
 
 
         final TableData<UserInfo> tableData = new TableData<>("测试",testData,columns);
         tableData.setShowCount(true);
-        table.getConfig().setColumnTitleBackgroundColor(getResources().getColor(R.color.windows_bg));
-        table.getConfig().setCountBackgroundColor(getResources().getColor(R.color.windows_bg));
+        table.getConfig().setColumnTitleBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
+        table.getConfig().setCountBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
 
         FontStyle fontStyle = new FontStyle();
         fontStyle.setTextColor(getResources().getColor(android.R.color.white));
@@ -82,7 +85,7 @@ public class ManyActivity extends AppCompatActivity implements View.OnClickListe
         ICellBackgroundFormat<CellInfo> backgroundFormat = new BaseCellBackgroundFormat<CellInfo>() {
             @Override
             public int getBackGroundColor( CellInfo cellInfo) {
-                if(cellInfo.position%2 == 0) {
+                if(cellInfo.row %2 == 0) {
                     return ContextCompat.getColor(ManyActivity.this, R.color.content_bg);
                 }
                 return TableConfig.INVALID_COLOR;
@@ -108,12 +111,17 @@ public class ManyActivity extends AppCompatActivity implements View.OnClickListe
                 return TableConfig.INVALID_COLOR;
             }
         };
-        table.getConfig().setContentBackgroundFormat(backgroundFormat)
-                .setYSequenceBgFormat(backgroundFormat2);
+        table.getConfig().setContentCellBackgroundFormat(backgroundFormat)
+                .setYSequenceCellBgFormat(backgroundFormat2);
         table.getConfig().setFixedYSequence(true);
         table.setTableData(tableData);
+        table.getMatrixHelper().flingRight(200);
+
+
 
     }
+
+
 
     @Override
     public void onClick(View view) {
@@ -164,6 +172,7 @@ public class ManyActivity extends AppCompatActivity implements View.OnClickListe
         items.add(TableStyle.FIXED_COUNT_ROW);
         items.add(TableStyle.ZOOM);
         chartDialog.show(this, true, items);
+
     }
 
     private void zoom(TableStyle item) {
@@ -333,5 +342,10 @@ public class ManyActivity extends AppCompatActivity implements View.OnClickListe
         BaseDialog dialog = new  BaseDialog.Builder(this).setFillWidth(true).setContentView(chartView).create();
         dialog.show();
     }
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        chartDialog = null;
+        quickChartDialog = null;
+    }
 }

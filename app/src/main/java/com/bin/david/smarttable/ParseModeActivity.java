@@ -5,18 +5,22 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
+import android.graphics.Paint;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
 import com.bin.david.form.core.SmartTable;
 import com.bin.david.form.core.TableConfig;
 import com.bin.david.form.data.CellInfo;
-import com.bin.david.form.data.Column;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.column.ColumnInfo;
 import com.bin.david.form.data.format.IFormat;
+import com.bin.david.form.data.format.bg.BaseBackgroundFormat;
+import com.bin.david.form.data.format.draw.MultiLineDrawFormat;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.bg.BaseCellBackgroundFormat;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
@@ -82,17 +86,16 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
         List<TanBean> tanBeans = TanBean.initDatas();
         //测试 从其他地方获取url
         int urlSize = tanBeans.size();
-        for(int i = 0;i <50; i++) {
-            UserInfo userData = new UserInfo("用户"+i, random.nextInt(70), System.currentTimeMillis()
+        for(int i = 0;i <100; i++) {
+            UserInfo userData = new UserInfo("用户\n"+i+"\nceh", random.nextInt(70), System.currentTimeMillis()
                     - random.nextInt(70)*3600*1000*24,true,new ChildData("测试"+i));
             userData.setUrl(tanBeans.get(i%urlSize).getUrl());
             testData.add(userData);
         }
 
         final Column<String> nameColumn = new Column<>("姓名", "name");
-        nameColumn.setFixed(true);
         nameColumn.setAutoCount(true);
-        final Column<Integer> ageColumn = new Column<>("年龄", "age");
+        final Column<Integer> ageColumn = new Column<>("年龄", "age",new MultiLineDrawFormat<Integer>(100));
         ageColumn.setFixed(true);
         ageColumn.setAutoCount(true);
         int imgSize = DensityUtils.dp2px(this,25);
@@ -222,12 +225,31 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
         Column totalColumn1 = new Column("总项1",nameColumn,ageColumn);
         Column totalColumn2 = new Column("总项2",nameColumn,ageColumn,timeColumn);
         Column totalColumn = new Column("总项",nameColumn,totalColumn1,totalColumn2,timeColumn);
-
+        column5.setOnColumnItemClickListener(new OnColumnItemClickListener<Boolean>() {
+            @Override
+            public void onClick(Column<Boolean> column, String value, Boolean aBoolean, int position) {
+                column.getDatas().set(position,!aBoolean);
+                table.invalidate();
+            }
+        });
         final TableData<UserInfo> tableData = new TableData<>("测试",testData,nameColumn,
                 avatarColumn,column4,column5,column6,column7,column8,column9,totalColumn,totalColumn1,totalColumn2,timeColumn);
         tableData.setShowCount(true);
-        table.getConfig().setColumnTitleBackgroundColor(getResources().getColor(R.color.windows_bg));
-        table.getConfig().setCountBackgroundColor(getResources().getColor(R.color.windows_bg));
+        table.getConfig().setShowTableTitle(true);
+      /*  tableData.setOnItemClickListener(new TableData.OnItemClickListener() {
+            @Override
+            public void onClick(Column column, String value, Object o, int col, int row) {
+                Log.e("smartTable","val"+value);
+            }
+        });*/
+        table.getConfig().setColumnTitleBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
+        table.getConfig().setCountBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
+        tableData.setOnItemClickListener(new TableData.OnItemClickListener() {
+            @Override
+            public void onClick(Column column, String value, Object o, int col, int row) {
+
+            }
+        });
         tableData.setTitleDrawFormat(new TitleImageDrawFormat(size,size, TitleImageDrawFormat.RIGHT,10) {
             @Override
             protected Context getContext() {
@@ -309,11 +331,11 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
                 Toast.makeText(ParseModeActivity.this,"点击了"+columnInfo.column.getColumnName(),Toast.LENGTH_SHORT).show();
             }
         });
-        table.getConfig().setTableTitleStyle(new FontStyle(this,15,getResources().getColor(R.color.arc1)));
+        table.getConfig().setTableTitleStyle(new FontStyle(this,15,getResources().getColor(R.color.arc1)).setAlign(Paint.Align.CENTER));
         ICellBackgroundFormat<CellInfo> backgroundFormat = new BaseCellBackgroundFormat<CellInfo>() {
             @Override
             public int getBackGroundColor(CellInfo cellInfo) {
-                if(cellInfo.position%2 == 0) {
+                if(cellInfo.row %2 == 0) {
                     return ContextCompat.getColor(ParseModeActivity.this, R.color.content_bg);
                 }
                 return TableConfig.INVALID_COLOR;
@@ -340,10 +362,16 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
                 return TableConfig.INVALID_COLOR;
             }
         };
-        table.getConfig().setContentBackgroundFormat(backgroundFormat)
-                .setYSequenceBgFormat(backgroundFormat2);
+        table.getConfig().setContentCellBackgroundFormat(backgroundFormat)
+                .setYSequenceCellBgFormat(backgroundFormat2);
         table.setTableData(tableData);
-
+        /*tableData.setOnRowClickListener(new TableData.OnRowClickListener<UserInfo>() {
+            @Override
+            public void onClick(Column column, UserInfo userInfo, int col, int row) {
+                Toast.makeText(ParseModeActivity.this,"用户:"+userInfo.getName(),Toast.LENGTH_SHORT).show();
+            }
+        });*/
+        table.getConfig().setSequenceHorizontalPadding(50);
     }
 
     @Override
@@ -381,6 +409,9 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
                         case ZOOM:
                             zoom(item);
                             break;
+                        case SHOW_SEQ:
+                            showSeq(item);
+                            break;
 
                     }
                 }
@@ -394,6 +425,7 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
         items.add(TableStyle.FIXED_FIRST_COLUMN);
         items.add(TableStyle.FIXED_COUNT_ROW);
         items.add(TableStyle.ZOOM);
+        items.add(TableStyle.SHOW_SEQ);
         chartDialog.show(this, true, items);
     }
 
@@ -412,6 +444,20 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
         });
     }
 
+    private void showSeq(TableStyle item) {
+        quickChartDialog.showDialog(this, item, new String[]{"显示", "不显示"}, new QuickChartDialog.OnCheckChangeAdapter() {
+
+            @Override
+            public void onItemClick(String s, int position) {
+                if (position == 0) {
+                   table.getConfig().setShowXSequence(true).setShowYSequence(true);
+                } else if (position == 1) {
+                    table.getConfig().setShowXSequence(false).setShowYSequence(false);
+                }
+                table.notifyDataChanged();
+            }
+        });
+    }
     private void fixedXAxis(TableStyle c) {
 
         quickChartDialog.showDialog(this, c, new String[]{"固定", "不固定"}, new QuickChartDialog.OnCheckChangeAdapter() {
@@ -565,4 +611,10 @@ public class ParseModeActivity extends AppCompatActivity implements View.OnClick
         dialog.show();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        chartDialog = null;
+        quickChartDialog = null;
+    }
 }

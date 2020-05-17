@@ -6,23 +6,20 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Toast;
 
 import com.bin.david.form.core.SmartTable;
-import com.bin.david.form.data.CellInfo;
-import com.bin.david.form.data.Column;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.column.ColumnInfo;
+import com.bin.david.form.data.format.bg.BaseBackgroundFormat;
+import com.bin.david.form.data.format.draw.MultiLineDrawFormat;
 import com.bin.david.form.data.table.TableData;
 import com.bin.david.form.data.format.IFormat;
-import com.bin.david.form.data.format.bg.BaseCellBackgroundFormat;
-import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
 import com.bin.david.form.data.format.count.ICountFormat;
 import com.bin.david.form.data.format.draw.BitmapDrawFormat;
 import com.bin.david.form.data.format.draw.ImageResDrawFormat;
-import com.bin.david.form.data.format.draw.MultiLineDrawFormat;
 import com.bin.david.form.data.format.draw.TextImageDrawFormat;
 import com.bin.david.form.data.format.tip.MultiLineBubbleTip;
 import com.bin.david.form.data.format.title.TitleImageDrawFormat;
@@ -113,7 +110,7 @@ public class MultParseModeActivity extends AppCompatActivity implements View.OnC
             }
         });
         avatarColumn.setFixed(true);
-       Column < String > column4 = new Column<>("测试多重查询", "childData.child");
+       Column < String > column4 = new Column<>("测试多重查询", "childData.child",new MultiLineDrawFormat<String>(this,100));
         column4.setAutoCount(true);
         final IFormat<Long> format =  new IFormat<Long>() {
             @Override
@@ -226,8 +223,8 @@ public class MultParseModeActivity extends AppCompatActivity implements View.OnC
         final TableData<UserInfo> tableData = new TableData<>("测试",testData,nameColumn,
                 avatarColumn,column4,column5,column6,column7,column8,column9,totalColumn,totalColumn1,totalColumn2,timeColumn);
         tableData.setShowCount(true);
-        table.getConfig().setColumnTitleBackgroundColor(getResources().getColor(R.color.windows_bg));
-        table.getConfig().setCountBackgroundColor(getResources().getColor(R.color.windows_bg));
+        table.getConfig().setColumnTitleBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
+        table.getConfig().setCountBackground(new BaseBackgroundFormat(getResources().getColor(R.color.windows_bg)));
         tableData.setTitleDrawFormat(new TitleImageDrawFormat(size,size, TitleImageDrawFormat.RIGHT,10) {
             @Override
             protected Context getContext() {

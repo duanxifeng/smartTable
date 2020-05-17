@@ -5,7 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.core.TableConfig;
 import com.bin.david.form.data.format.bg.ICellBackgroundFormat;
 
@@ -82,7 +82,7 @@ public abstract class BitmapTitleDrawFormat implements ITitleDrawFormat {
     }
 
     public boolean drawBackground(Canvas c, Column column, Rect rect, TableConfig config) {
-        ICellBackgroundFormat<Column> backgroundFormat = config.getColumnBackgroundFormat();
+        ICellBackgroundFormat<Column> backgroundFormat = config.getColumnCellBackgroundFormat();
         if(isDrawBackground && backgroundFormat != null){
             backgroundFormat.drawBackground(c,rect,column,config.getPaint());
             return true;

@@ -1,9 +1,7 @@
 package com.bin.david.smarttable.excel;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.AsyncTask;
@@ -13,8 +11,9 @@ import com.bin.david.form.core.SmartTable;
 import com.bin.david.form.core.TableConfig;
 import com.bin.david.form.data.CellInfo;
 import com.bin.david.form.data.CellRange;
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.data.format.IFormat;
+import com.bin.david.form.data.format.bg.BaseBackgroundFormat;
 import com.bin.david.form.data.format.bg.BaseCellBackgroundFormat;
 import com.bin.david.form.data.format.draw.LeftTopDrawFormat;
 import com.bin.david.form.data.format.draw.TextDrawFormat;
@@ -26,10 +25,13 @@ import com.bin.david.form.data.table.ArrayTableData;
 import com.bin.david.form.utils.DensityUtils;
 import com.bin.david.form.utils.DrawUtils;
 import com.bin.david.smarttable.R;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-
 
 
 /**
@@ -45,8 +47,8 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
     private String fileName;
     private List<CellRange> ranges;
     private float fontScale =  1.7f;
-    private SmartTable<T> smartTable;
-
+    protected SmartTable<T> smartTable;
+    private boolean isAssetsFile = true; //默认从Assets文件读取
     /**
      * 初始化默认配置
      * @param context
@@ -63,8 +65,8 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
         //配置
         table.getConfig().setHorizontalPadding(DensityUtils.dp2px(context,10))
                 .setColumnTitleHorizontalPadding(DensityUtils.dp2px(context,5))
-                .setXSequenceBackgroundColor(backgroundColor)
-                .setYSequenceBackgroundColor(backgroundColor)
+                .setXSequenceBackground(new BaseBackgroundFormat(backgroundColor))
+                .setYSequenceBackground(new BaseBackgroundFormat(backgroundColor))
                 .setLeftAndTopBackgroundColor(backgroundColor)
                 .setSequenceGridStyle(new LineStyle().setColor(xyGridColor))
                 .setLeftTopDrawFormat(new LeftTopDrawFormat() { //设置左上角三角形
@@ -79,7 +81,7 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
                     }
                 });
         //设置表格背景颜色
-        table.getConfig().setContentBackgroundFormat(new BaseCellBackgroundFormat<CellInfo>() {
+        table.getConfig().setContentCellBackgroundFormat(new BaseCellBackgroundFormat<CellInfo>() {
             @Override
             public int getBackGroundColor(CellInfo cellInfo) {
                if(cellInfo.data !=null) {
@@ -123,6 +125,9 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
     }
 
 
+    protected String getFileName(){
+        return fileName;
+    }
 
     @Override
     public void setCallback(ExcelCallback excelCallback) {
@@ -133,11 +138,12 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
     public void loadSheetList(Context context,String fileName) {
         sheetAsyncTask = new SheetAsyncTask(context,callback);
         sheetAsyncTask.execute(fileName);
+        this.fileName = fileName;
     }
 
     @Override
-    public void loadSheetContent(Context context, String fileName, int position) {
-        this.fileName = fileName;
+    public void loadSheetContent(Context context,int position) {
+
         excelAsyncTask = new ExcelAsyncTask<>(context);
         excelAsyncTask.execute(position);
     }
@@ -196,12 +202,33 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
     protected abstract boolean hasComment(T t);
     protected abstract String getComment(T t);
     public abstract T[][]  getEmptyTableData();
+    public void loadDataSuc(Context context){}
+
+    /**
+     * 获取输出流
+     * @param context
+     * @return
+     * @throws IOException
+     */
+    public InputStream getInputStream(Context context,String fileName) throws IOException {
+        InputStream is;
+        if(isAssetsFile)
+            is = context.getAssets().open(fileName);
+        else
+            is = new FileInputStream(fileName);
+        return is;
+    }
 
 
+    @Override
+    public void setIsAssetsFile(boolean isAssetsFile) {
+        this.isAssetsFile = isAssetsFile;
+    }
 
     public class ExcelAsyncTask<K> extends AsyncTask<Integer,Void, K[][]>{
 
         WeakReference<Context> softReference;
+
 
         public ExcelAsyncTask(Context context) {
             softReference=new WeakReference<>(context);
@@ -228,48 +255,58 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
                 //设置字体
                 ArrayTableData<K> tableData = ArrayTableData.create((SmartTable<K>) smartTable, "", data, new TextDrawFormat<K>() {
 
-
                     //Excel 因为每格的大小都不一样，所以需要重新计算高度和宽度
                     @Override
                     public int measureWidth(Column<K> column, int position, TableConfig config) {
+                        if(softReference.get() == null){
+                            return 0;
+                        }
                         int width = 0;
                         K cell = column.getDatas().get(position);
                         if (cell != null) {
                             int fontSize = (int) (getFontSize(softReference.get(),(T) cell) * fontScale); //增加字体，效果更好看
                             config.getPaint().setTextSize(DensityUtils.sp2px(softReference.get(), fontSize));
-                            width = DrawUtils.getMultiTextWidth(config.getPaint(), column.format(position));
+                            width = DrawUtils.getMultiTextWidth(config.getPaint(),getSplitString(column.format(position)));
                         }
                         return width;
                     }
 
                     @Override
                     public int measureHeight(Column<K> column, int position, TableConfig config) {
+                        if(softReference.get() == null){
+                            return 0;
+                        }
                         K cell = column.getDatas().get(position);
                         if (cell != null) {
 
                             int fontSize = (int) (getFontSize(softReference.get(),(T) cell) * fontScale); //增加字体，效果更好看
                             config.getPaint().setTextSize(DensityUtils.sp2px(softReference.get(), fontSize));
-                            return DrawUtils.getMultiTextHeight(config.getPaint(), column.format(position));
+                            return DrawUtils.getMultiTextHeight(config.getPaint(), getSplitString(column.format(position)));
                         }
                         return super.measureHeight(column, position, config);
                     }
 
                     @Override
                     protected void drawText(Canvas c, String value, Rect rect, Paint paint) {
-                        DrawUtils.drawMultiText(c, paint, rect, value);
+                        DrawUtils.drawMultiText(c, paint, rect, getSplitString(value));
                     }
 
                     @Override
-                    public void setTextPaint(TableConfig config, K cell, Paint paint) {
-                        super.setTextPaint(config, cell, paint);
-                        if (cell != null) {
-                            config.getPaint().setTextAlign(getAlign((T) cell));
-                            int fontSize = (int) (getFontSize(softReference.get(),(T) cell) * fontScale); //增加字体，效果更好看
+                    public void setTextPaint(TableConfig config, CellInfo<K> cellInfo, Paint paint) {
+                        if(softReference.get() == null){
+                            return;
+                        }
+                        super.setTextPaint(config, cellInfo, paint);
+                        if (cellInfo.data != null) {
+                            config.getPaint().setTextAlign(getAlign((T) cellInfo.data));
+                            int fontSize = (int) (getFontSize(softReference.get(),(T) cellInfo.data) * fontScale); //增加字体，效果更好看
                             config.getPaint().setTextSize(DensityUtils.sp2px(softReference.get(), fontSize)*config.getZoom());
-                            paint.setColor(getTextColor(softReference.get(),(T) cell));
+                            paint.setColor(getTextColor(softReference.get(),(T) cellInfo.data));
 
                         }
                     }
+
+
                 });
                 if (ranges != null) {
                     tableData.setUserCellRange(ranges); //设置自定义规则
@@ -283,7 +320,14 @@ public abstract class BaseExcel2Table<T> implements IExcel2Table<T> {
                         return "";
                     }
                 });
+                int defaultCellSize = DensityUtils.dp2px(softReference.get(),30);
+                tableData.setMinWidth(defaultCellSize);
+                tableData.setMinWidth(defaultCellSize);
+                loadDataSuc(softReference.get());
+                smartTable.getMatrixHelper().reset();
                 ((SmartTable<K>)smartTable).setTableData(tableData);
+
+
             }
         }
     }

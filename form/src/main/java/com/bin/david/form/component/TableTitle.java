@@ -26,21 +26,19 @@ public class TableTitle implements ITableTitle {
         Paint paint = config.getPaint();
         config.getTableTitleStyle().fillPaint(paint);
         Rect rect = getRect();
-        int startY = rect.centerY();
         int startX = rect.centerX();
         Path path = new Path();
         switch (direction) {
             case TOP:
             case BOTTOM:
-                paint.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText(tableName, startX, DrawUtils.getTextCenterY(startY,paint), paint);
+                DrawUtils.drawMultiText(canvas,paint,rect,tableName.split("\n"));
                 break;
             case LEFT:
             case RIGHT:
                 int textWidth = (int)paint.measureText(tableName);
                 path.moveTo(startX,rect.top);
                 path.lineTo(startX,rect.bottom);
-                canvas.drawTextOnPath(tableName,path,(rect.height()-textWidth)/2,0,paint);
+                canvas.drawTextOnPath(tableName,path,textWidth/2,0,paint);
                 break;
         }
     }
@@ -50,7 +48,7 @@ public class TableTitle implements ITableTitle {
         rect.left = showRect.left;
         rect.right = showRect.right;
         rect.top = showRect.top;
-        rect.bottom = showRect.bottom;
+        rect.bottom = Math.min(showRect.bottom,scaleRect.bottom);
         int h =  size;
         int w =size;
         switch (direction){

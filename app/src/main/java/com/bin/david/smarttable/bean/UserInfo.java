@@ -10,21 +10,15 @@ import java.util.List;
 /**
  * Created by huang on 2017/11/1.
  */
-@SmartTable(name="用户信息列表",count = true)
 public class UserInfo {
-    @SmartColumn(id =1,name = "姓名",autoCount = true)
     private String name;
-    @SmartColumn(id=2,name="年龄",autoCount = true)
     private int age;
-    @SmartColumn(id =3,name="更新时间")
     private long time;
-    @SmartColumn(type= ColumnType.Child)
     private ChildData childData;
-    @SmartColumn(id =4,name="选中")
     private boolean isCheck;
     private String url;
-    @SmartColumn(type= ColumnType.List)
-    private List<PM25> weather;
+    private Boolean isTest;
+
 
     public UserInfo(String name, int age, long time, boolean isCheck, ChildData childData) {
         this.name = name;
@@ -81,4 +75,5 @@ public class UserInfo {
     public void setUrl(String url) {
         this.url = url;
     }
+
 }

@@ -1,14 +1,17 @@
 package com.bin.david.form.data.table;
 
+
+import com.bin.david.form.data.Cell;
 import com.bin.david.form.data.CellRange;
-import com.bin.david.form.data.Column;
-import com.bin.david.form.data.ColumnInfo;
+import com.bin.david.form.data.column.Column;
+import com.bin.david.form.data.column.ColumnInfo;
 import com.bin.david.form.data.TableInfo;
 import com.bin.david.form.data.format.sequence.ISequenceFormat;
 import com.bin.david.form.data.format.sequence.LetterSequenceFormat;
 import com.bin.david.form.data.format.sequence.NumberSequenceFormat;
 import com.bin.david.form.data.format.title.ITitleDrawFormat;
 import com.bin.david.form.data.format.title.TitleDrawFormat;
+import com.bin.david.form.listener.OnColumnItemClickListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,10 +35,12 @@ public class TableData<T> {
     private ITitleDrawFormat titleDrawFormat;
     private ISequenceFormat XSequenceFormat;
     private ISequenceFormat YSequenceFormat;
-    private int lineSize;
-    private List<CellRange> cellRangeAddresses;
     //用户设置的 不能清除
     private List<CellRange> userSetRangeAddress;
+    private OnItemClickListener onItemClickListener;
+    private OnRowClickListener<T> onRowClickListener;
+    private OnColumnClickListener<?> onColumnClickListener;
+
     /**
      *
      * @param tableName 表名
@@ -66,12 +71,11 @@ public class TableData<T> {
         this.tableName = tableName;
         this.columns = columns;
         this.t = t;
-        lineSize = t.size();
-        tableInfo.setLineSize(lineSize);
+        tableInfo.setLineSize(t.size());
         childColumns = new ArrayList<>();
         columnInfos = new ArrayList<>();
         childColumnInfos = new ArrayList<>();
-        cellRangeAddresses = new ArrayList<>();
+        //cellRangeAddresses = new ArrayList<>();
         this.titleDrawFormat = titleDrawFormat == null?new TitleDrawFormat() :titleDrawFormat;
     }
 
@@ -115,8 +119,7 @@ public class TableData<T> {
      */
     public void setT(List<T> t) {
         this.t = t;
-        lineSize = t.size();
-        tableInfo.setLineSize(lineSize);
+        tableInfo.setLineSize( t.size());
     }
 
 
@@ -197,9 +200,6 @@ public class TableData<T> {
         return showCount;
     }
 
-    public void setLineSize(int lineSize) {
-        this.lineSize = lineSize;
-    }
 
     /**
      * 设置是否显示统计总数
@@ -291,26 +291,54 @@ public class TableData<T> {
      * @return 行数
      */
     public int getLineSize() {
-        return lineSize;
+        return tableInfo.getLineHeightArray().length;
     }
 
-    /**
+    private void addCellRange(int firstRow,int lastRow,int firstCol,int lastCol){
+        Cell[][] tableCells = tableInfo.getRangeCells();
+        Cell realCell = null;
+        if(tableCells !=null) {
+            for (int i = firstRow; i <= lastRow; i++) {
+                if (i < tableCells.length)
+                    for (int j = firstCol; j <= lastCol; j++) {
+                        if (j < tableCells[i].length) {
+                            if (i == firstRow && j == firstCol) {
+                                int rowCount = Math.min(lastRow + 1, tableCells.length) - firstRow;
+                                int colCount = Math.min(lastCol + 1, tableCells[i].length) - firstCol;
+                                realCell = new Cell(colCount, rowCount);
+                                tableCells[i][j] = realCell;
+                                continue;
+                            }
+                            tableCells[i][j] = new Cell(realCell);
+                        }
+                    }
+            }
+        }
+    }
+
+   /* *//**
      * 获取所有合并规则，包括自定义和自动合并规则
      * 请不要使用该方法来添加合并单元格
      * 而是通过设置setUserCellRange来添加
      * @return
      */
-    public List<CellRange> getCellRangeAddresses() {
-        return cellRangeAddresses;
+    public void addCellRange(CellRange range) {
+        addCellRange(range.getFirstRow(),range.getLastRow(),
+                range.getFirstCol(),range.getLastCol());
+        //cellRangeAddresses.add(range);
     }
 
     /**
      * 清除自动合并的规则
      */
     public void clearCellRangeAddresses(){
-        cellRangeAddresses.clear();
-        if(userSetRangeAddress !=null)
-            cellRangeAddresses.addAll(userSetRangeAddress);
+        //cellRangeAddresses.clear();
+        if(userSetRangeAddress !=null) {
+            for(CellRange range:userSetRangeAddress) {
+                addCellRange(range);
+            }
+
+        }
     }
     /**
      * 提供添加自定义合并规则
@@ -344,13 +372,17 @@ public class TableData<T> {
             childColumnInfos.clear();
             childColumnInfos = null;
         }
-        if(cellRangeAddresses !=null){
+  /*      if(cellRangeAddresses !=null){
             cellRangeAddresses.clear();
             cellRangeAddresses =null;
-        }
+        }*/
         if(userSetRangeAddress !=null){
             userSetRangeAddress.clear();
             userSetRangeAddress =null;
+        }
+        if(tableInfo !=null){
+            tableInfo.clear();
+            tableInfo = null;
         }
         sortColumn = null;
         titleDrawFormat = null;
@@ -359,4 +391,88 @@ public class TableData<T> {
 
     }
 
+    /**
+     * 获取表格单元格Cell点击事件
+     */
+    public OnItemClickListener getOnItemClickListener() {
+        return onItemClickListener;
+
+    }
+
+    /**
+     * 设置表格单元格Cell点击事件
+     * @param onItemClickListener 点击事件
+     */
+    public void setOnItemClickListener(final OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
+        for(Column column: columns){
+            if(!column.isParent()) {
+                column.setOnColumnItemClickListener(new OnColumnItemClickListener() {
+                    @Override
+                    public void onClick(Column column, String value, Object t, int position) {
+                        if (onItemClickListener != null) {
+                            int index = childColumns.indexOf(column);
+                            TableData.this.onItemClickListener.onClick(column, value, t, index, position);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+
+    /**
+     * 设置表格行点击事件
+     * @param onRowClickListener 行点击事件
+     */
+    public void setOnRowClickListener(final OnRowClickListener<T> onRowClickListener) {
+        this.onRowClickListener = onRowClickListener;
+        if(this.onRowClickListener !=null) {
+            setOnItemClickListener(new OnItemClickListener() {
+                @Override
+                public void onClick(Column column, String value, Object o, int col, int row) {
+                    TableData.this.onRowClickListener.onClick(column, t.get(row), col, row);
+                }
+            });
+        }
+
+    }
+
+
+    /**
+     * 设置表格列点击事件
+     */
+    public void setOnColumnClickListener(final OnColumnClickListener onColumnClickListener) {
+        this.onColumnClickListener = onColumnClickListener;
+        if(this.onRowClickListener !=null) {
+            setOnItemClickListener(new OnItemClickListener() {
+                @Override
+                public void onClick(Column column, String value, Object o, int col, int row) {
+                    TableData.this.onColumnClickListener.onClick(column, column.getDatas(), col, row);
+                }
+            });
+        }
+    }
+
+
+    public OnRowClickListener getOnRowClickListener() {
+        return onRowClickListener;
+    }
+
+    /**
+     * 表格单元格Cell点击事件接口
+     */
+    public interface  OnItemClickListener<T>{
+        void onClick(Column<T> column,String value, T t, int col,int row);
+    }
+    /**
+     * 表格行点击事件接口
+     */
+    public interface OnRowClickListener<T>{
+        void onClick(Column column, T t, int col,int row);
+    }
+
+    public interface OnColumnClickListener<T>{
+        void onClick(Column column, List<T> t, int col,int row);
+    }
 }

@@ -2,7 +2,7 @@ package com.bin.david.form.data.table;
 
 
 import com.bin.david.form.core.SmartTable;
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.data.format.IFormat;
 import com.bin.david.form.data.format.draw.IDrawFormat;
 import com.bin.david.form.listener.OnColumnItemClickListener;
@@ -21,7 +21,7 @@ public class ArrayTableData<T> extends TableData<T> {
 
     private  T[][] data;
     private List<Column<T>> arrayColumns;
-    private OnItemClickListener onItemClickListener;
+
 
     /**
      * 提供将数组[col][row]转换成数组[row][col]
@@ -45,8 +45,7 @@ public class ArrayTableData<T> extends TableData<T> {
                 for (int i = 0; i < rowArray.length; i++) { //转换一下
                     for (int j = 0; j < rowArray[i].length; j++) {
                         if(newData[j] == null) {
-                            T[] column = (T[]) Array.newInstance(row.getClass().getComponentType(),rowArray.length);
-                            newData[j] = column;
+                            newData[j] = (T[]) Array.newInstance(row.getClass().getComponentType(),rowArray.length);
                         }
                         newData[j][i] = rowArray[i][j];
                     }
@@ -76,10 +75,10 @@ public class ArrayTableData<T> extends TableData<T> {
         }
         ArrayList<T> arrayList = new ArrayList<>(Arrays.asList(data[0]));
         ArrayTableData<T> tableData =  new ArrayTableData<>(tableName,arrayList,columns);
-
         tableData.setData(data);
         return tableData;
     }
+
     /**
      * 创建不需要显示列名的二维数组表格数据
      * 如果数据不是数组[row][col]，可以使用transformColumnArray方法转换
@@ -88,7 +87,7 @@ public class ArrayTableData<T> extends TableData<T> {
      * @param drawFormat 数据格式化
      * @return 创建的二维数组表格数据
      */
-    public static<T> ArrayTableData<T> create(SmartTable<T> table,String tableName, T[][] data, IDrawFormat<T> drawFormat){
+    public static<T> ArrayTableData<T> create(SmartTable table,String tableName, T[][] data, IDrawFormat<T> drawFormat){
         table.getConfig().setShowColumnTitle(false);
         return create(tableName,null,data,drawFormat);
     }
@@ -99,10 +98,40 @@ public class ArrayTableData<T> extends TableData<T> {
      */
     public void setFormat(IFormat<T> format){
         for(Column<T> column:arrayColumns){
+
+
             column.setFormat(format);
         }
     }
+    /**
+     * 设置绘制格式化
+     * @param format
+     */
+    public void setDrawFormat(IDrawFormat<T> format){
+        for(Column<T> column:arrayColumns){
+            column.setDrawFormat(format);
+        }
+    }
 
+    /**
+     * 设置最小宽度
+     * @param minWidth
+     */
+    public void setMinWidth(int minWidth){
+        for(Column<T> column:arrayColumns){
+            column.setMinWidth(minWidth);
+        }
+    }
+
+    /**
+     * 设置最小高度
+     * @param minHeight
+     */
+    public void setMinHeight(int minHeight){
+        for(Column<T> column:arrayColumns){
+            column.setMinHeight(minHeight);
+        }
+    }
 
 
     /**
@@ -111,7 +140,7 @@ public class ArrayTableData<T> extends TableData<T> {
      * @param t 数据
      * @param columns 列
      */
-    private ArrayTableData(String tableName, List<T> t, List<Column<T>> columns) {
+    protected ArrayTableData(String tableName, List<T> t, List<Column<T>> columns) {
         super(tableName, t, new ArrayList<Column>(columns));
         this.arrayColumns = columns;
     }
@@ -140,36 +169,6 @@ public class ArrayTableData<T> extends TableData<T> {
 
 
 
-    /**
-     * 获取表格单元格Cell点击事件
-     */
-    public OnItemClickListener getOnItemClickListener() {
-        return onItemClickListener;
 
-    }
 
-    /**
-     * 设置表格单元格Cell点击事件
-     * @param onItemClickListener 点击事件
-     */
-    public void setOnItemClickListener(final OnItemClickListener<T> onItemClickListener) {
-        this.onItemClickListener = onItemClickListener;
-        for(Column<T> column: arrayColumns){
-            column.setOnColumnItemClickListener(new OnColumnItemClickListener<T>() {
-                @Override
-                public void onClick(Column<T> column, String value, T t, int position) {
-                    if(onItemClickListener !=null){
-                        int index = arrayColumns.indexOf(column);
-                        onItemClickListener.onClick(column,value,t,index,position);
-                    }
-                }
-            });
-        }
-    }
-    /**
-     * 表格单元格Cell点击事件接口
-     */
-    public interface  OnItemClickListener<T>{
-        void onClick(Column<T> column,String value, T t, int col,int row);
-    }
 }

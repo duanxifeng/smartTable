@@ -10,8 +10,9 @@ import android.widget.Toast;
 
 import com.bin.david.form.core.SmartTable;
 import com.bin.david.form.core.TableConfig;
+import com.bin.david.form.data.CellInfo;
 import com.bin.david.form.data.table.ArrayTableData;
-import com.bin.david.form.data.Column;
+import com.bin.david.form.data.column.Column;
 import com.bin.david.form.data.format.draw.IDrawFormat;
 import com.bin.david.form.data.style.FontStyle;
 import com.bin.david.form.data.style.LineStyle;
@@ -34,10 +35,11 @@ public class ArrayModeActivity extends AppCompatActivity {
         FontStyle fontStyle = new FontStyle(this,10,ContextCompat.getColor(this,R.color.arc_text));
         table.getConfig().setColumnTitleStyle(fontStyle);
         table.getConfig().setHorizontalPadding(0);
-        table.getConfig().setVerticalPadding(0);
-        table.getConfig().setGridStyle(new LineStyle());
 
-        ArrayTableData<Integer> tableData = ArrayTableData.create("日程表",week,infos,new IDrawFormat<Integer>(){
+        table.getConfig().setVerticalPadding(0);
+        table.getConfig().setContentGridStyle(new LineStyle());
+
+        final ArrayTableData<Integer> tableData = ArrayTableData.create("日程表",week,infos,new IDrawFormat<Integer>(){
 
             @Override
             public int measureWidth(Column<Integer> column, int position,TableConfig config) {
@@ -50,10 +52,10 @@ public class ArrayModeActivity extends AppCompatActivity {
             }
 
             @Override
-            public void draw(Canvas c, Column<Integer> column, Integer integer, String value, Rect rect, int position, TableConfig config) {
+            public void draw(Canvas c, Rect rect, CellInfo<Integer> cellInfo, TableConfig config) {
                 Paint paint = config.getPaint();
                 int color;
-                switch (integer){
+                switch (cellInfo.data){
                     case 1:
                         color =R.color.github_con_1;
                         break;
@@ -78,9 +80,14 @@ public class ArrayModeActivity extends AppCompatActivity {
         tableData.setOnItemClickListener(new ArrayTableData.OnItemClickListener<Integer>() {
             @Override
             public void onClick(Column column, String value, Integer o, int col, int row) {
+                tableData.getArrayColumns().get(col).getDatas().get(row);
                 Toast.makeText(ArrayModeActivity.this,"列:"+col+ " 行："+row + "数据："+value,Toast.LENGTH_SHORT).show();
             }
         });
         table.setTableData(tableData);
     }
+
+
+
+
 }

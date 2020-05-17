@@ -10,6 +10,7 @@
     <color name="cal_buckle_text_color">#949494</color>
     <color name="drak_calendar_text_color">#222222</color>
     <color name="base_black_title_color">#222222</color>
+    <color name="dedede">#dedede</color>
 
     <color name="arc1">#099bfb</color>
     <color name="arc2">#37d547</color>
@@ -35,4 +36,5 @@
     <color name="github_con_3">#239a3b</color>
     <color name="github_con_4">#196127</color>
     <color name="seat_y_bg">#80000000</color>
+    <color name="text_color">#999999</color>
 </resources>
