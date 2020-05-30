@@ -15,7 +15,9 @@ import com.bin.david.form.listener.OnColumnItemClickListener;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by huang on 2017/10/30.
@@ -69,12 +71,12 @@ public class TableData<T> {
      */
     public TableData(String tableName,List<T> t,List<Column> columns,ITitleDrawFormat titleDrawFormat) {
         this.tableName = tableName;
-        this.columns = columns;
+        this.columns = new CopyOnWriteArrayList<>(columns);
         this.t = t;
         tableInfo.setLineSize(t.size());
-        childColumns = new ArrayList<>();
-        columnInfos = new ArrayList<>();
-        childColumnInfos = new ArrayList<>();
+        childColumns = new CopyOnWriteArrayList<>();
+        columnInfos = new CopyOnWriteArrayList<>();
+        childColumnInfos = new CopyOnWriteArrayList<>();
         //cellRangeAddresses = new ArrayList<>();
         this.titleDrawFormat = titleDrawFormat == null?new TitleDrawFormat() :titleDrawFormat;
     }
