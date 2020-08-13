@@ -293,21 +293,28 @@ public class TableProvider<T> implements TableClickObserver {
             Column column = columns.get(i);
             float width = column.getComputeWidth()*config.getZoom();
             float tempLeft = left;
-            //根据根部标题是否固定
-            Column topColumn = childColumnInfo.get(i).getTopParent().column;
-            if (topColumn.isFixed()) {
-                isPerFixed = false;
-                if(tempLeft < clipRect.left){
-                    left = clipRect.left;
-                    clipRect.left +=width;
-                    isPerFixed = true;
+            try {
+                if (i < childColumnInfo.size()) {
+                    //根据根部标题是否固定
+                    Column topColumn = childColumnInfo.get(i).getTopParent().column;
+                    if (topColumn.isFixed()) {
+                        isPerFixed = false;
+                        if (tempLeft < clipRect.left) {
+                            left = clipRect.left;
+                            clipRect.left += width;
+                            isPerFixed = true;
+                        }
+                    } else if (isPerFixed) {
+                        canvas.save();
+                        canvas.clipRect(clipRect);
+                        isPerFixed = false;
+                        clipCount++;
+                    }
                 }
-            }else if(isPerFixed){
-                canvas.save();
-                canvas.clipRect(clipRect);
-                isPerFixed = false;
-               clipCount++;
+            } catch (Exception e) {
+                e.printStackTrace();
             }
+
             float right = left + width;
 
             if (left < showRect.right) {
